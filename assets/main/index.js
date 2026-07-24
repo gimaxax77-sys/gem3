@@ -787,8 +787,8 @@ System.register("chunks:///_virtual/balance.ts", ['cc', './relics.ts', './pets.t
   };
 });
 
-System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './gameState.ts', './units.ts', './stats.ts', './formation.ts'], function (exports) {
-  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, UITransform, Label, Color, Node, Layers, Sprite, resources, SpriteFrame, Component, createGameState, createUnit, computePower, autoFormation, formationSummary;
+System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './gameState.ts', './units.ts', './stats.ts', './formation.ts', './campaign.ts'], function (exports) {
+  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, Label, UITransform, Color, Node, Layers, Sprite, resources, SpriteFrame, Component, createGameState, createUnit, computePower, autoFormation, formationSummary, CAMPAIGN_CHAPTER_COUNT, fightChapter, chapterReward;
   return {
     setters: [function (module) {
       _inheritsLoose = module.inheritsLoose;
@@ -796,8 +796,8 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
     }, function (module) {
       cclegacy = module.cclegacy;
       _decorator = module._decorator;
-      UITransform = module.UITransform;
       Label = module.Label;
+      UITransform = module.UITransform;
       Color = module.Color;
       Node = module.Node;
       Layers = module.Layers;
@@ -814,6 +814,10 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
     }, function (module) {
       autoFormation = module.autoFormation;
       formationSummary = module.formationSummary;
+    }, function (module) {
+      CAMPAIGN_CHAPTER_COUNT = module.CAMPAIGN_CHAPTER_COUNT;
+      fightChapter = module.fightChapter;
+      chapterReward = module.chapterReward;
     }],
     execute: function () {
       var _dec, _class;
@@ -858,18 +862,23 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
           _this.state = void 0;
           _this.content = void 0;
           // 화면별 내용이 그려지는 컨테이너
+          _this.walletLabel = void 0;
+          // 재화바(참조 보관 → 갱신)
           _this.tabNodes = [];
-          _this.active = 'battle';
+          _this.active = 'idle';
+          // 기본 탭 = 방치(홈)
+          _this.auto = true;
           return _this;
         }
         var _proto = BattleDemo.prototype;
-        // 기본 탭(기존 전투 데모 유지)
+        // 방치 자동전투 on/off
         _proto.start = function start() {
           this.state = createGameState({
             units: [],
             party: []
           });
-          // 데모용 초기 재화(뼈대 확인용 — 실제 수급은 이후 방치 루프에서)
+          this.setupParty();
+          // 데모용 초기 재화(뼈대 확인용 — 실제 수급은 방치 루프가 채운다)
           this.state.wallet.currency = 1200;
           this.state.wallet.growth = 40;
           this.state.wallet.summon = 3;
@@ -880,18 +889,42 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
           this.select(this.active);
         }
 
+        // 방치·전투가 공유하는 데모 파티 1회 구성(레벨 넉넉히 → 초반 챕터 자동 진행)
+        ;
+
+        _proto.setupParty = function setupParty() {
+          var units = PARTY.map(function (p) {
+            return createUnit(p.arch, {
+              level: 40,
+              rank: 3,
+              characterId: p.id
+            });
+          });
+          this.state.units = units;
+          this.state.party = units.map(function (u) {
+            return u.uid;
+          });
+          autoFormation(this.state);
+        }
+
         // ── 상단 재화바 ─────────────────────────────────────────────
         ;
 
         _proto.drawTopBar = function drawTopBar() {
+          this.walletLabel = this.addLabel(this.walletText(), 0, TOP_Y, 20);
+        };
+        _proto.walletText = function walletText() {
           var _this2 = this;
-          var parts = CURRENCIES.map(function (_ref) {
+          return CURRENCIES.map(function (_ref) {
             var _this2$state$wallet$k;
             var k = _ref[0],
               name = _ref[1];
             return name + " " + ((_this2$state$wallet$k = _this2.state.wallet[k]) != null ? _this2$state$wallet$k : 0);
-          });
-          this.addLabel(parts.join('    '), 0, TOP_Y, 20);
+          }).join('    ');
+        };
+        _proto.refreshWallet = function refreshWallet() {
+          var _this$walletLabel;
+          if ((_this$walletLabel = this.walletLabel) != null && _this$walletLabel.isValid) this.walletLabel.getComponent(Label).string = this.walletText();
         }
 
         // ── 하단 탭바 ───────────────────────────────────────────────
@@ -920,39 +953,94 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
           });
         }
 
-        // 탭 전환: 컨텐츠 비우고 해당 화면 렌더 + 탭 강조 갱신
+        // 탭 전환: 방치 스케줄 정지 → 컨텐츠 비우고 렌더 + 탭 강조 갱신
         ;
 
         _proto.select = function select(key) {
+          this.unscheduleAllCallbacks(); // 이전 화면의 방치 루프 정지
           this.active = key;
           this.content.destroyAllChildren();
           this.tabNodes.forEach(function (n, i) {
             var on = TABS[i][0] === key;
             n.getComponent(Label).color = on ? new Color(255, 220, 120, 255) : new Color(150, 150, 150, 255);
           });
-          if (key === 'battle') this.renderBattle();else if (key === 'idle') this.renderPlaceholder('방치 화면', '자동 획득·진행 루프 (다음 단계)');else if (key === 'heroes') this.renderPlaceholder('영웅 로스터', "\uBCF4\uC720 \uC720\uB2DB " + this.state.units.length + "\uC885 (\uB2E4\uC74C \uB2E8\uACC4)");else if (key === 'summon') this.renderPlaceholder('소환', "\uC18C\uD658 \uC7AC\uD654 " + this.state.wallet.summon + " (\uB2E4\uC74C \uB2E8\uACC4)");
+          if (key === 'idle') this.renderIdle();else if (key === 'battle') this.renderBattle();else if (key === 'heroes') this.renderPlaceholder('영웅 로스터', "\uBCF4\uC720 \uC720\uB2DB " + this.state.units.length + "\uC885 (\uB2E4\uC74C \uB2E8\uACC4)");else if (key === 'summon') this.renderPlaceholder('소환', "\uC18C\uD658 \uC7AC\uD654 " + this.state.wallet.summon + " (\uB2E4\uC74C \uB2E8\uACC4)");
         }
 
-        // ── 전투 화면(기존 데모 로직 — 컨텐츠 노드 기준으로 그림) ────────
+        // ── 방치 화면 — 캠페인 자동 도전 루프 ───────────────────────
+        ;
+
+        _proto.renderIdle = function renderIdle() {
+          var _this4 = this;
+          var c = this.content;
+          var progress = this.addLabel('', 0, 200, 22, c);
+          var nextInfo = this.addLabel('', 0, 158, 18, c);
+          var toggle = this.addLabel('', 0, 108, 20, c);
+          toggle.addComponent(UITransform).setContentSize(320, 50);
+          var status = this.addLabel('', 0, 62, 16, c);
+          var logLabel = this.addLabel('', 0, -40, 15, c); // 최근 로그 여러 줄
+          var log = [];
+          var refresh = function refresh() {
+            var cleared = _this4.state.campaign.cleared;
+            progress.getComponent(Label).string = "\uC9C4\uD589: \uCC55\uD130 " + cleared + " / " + CAMPAIGN_CHAPTER_COUNT + " \uD074\uB9AC\uC5B4";
+            if (cleared >= CAMPAIGN_CHAPTER_COUNT) {
+              nextInfo.getComponent(Label).string = '🎉 전 챕터 클리어!';
+            } else {
+              var r = chapterReward(cleared);
+              nextInfo.getComponent(Label).string = "\uB2E4\uC74C: \uCC55\uD130 " + (cleared + 1) + "  (\uBCF4\uC0C1 \uC82C" + r.gem + " \xB7 \uC18C\uD658" + r.summon + ")";
+            }
+            toggle.getComponent(Label).string = "[ \uC790\uB3D9\uC804\uD22C: " + (_this4.auto ? 'ON' : 'OFF') + " ]";
+          };
+          var pushLog = function pushLog(s) {
+            log.unshift(s);
+            if (log.length > 5) log.pop();
+            logLabel.getComponent(Label).string = log.join('\n');
+          };
+          var setStatus = function setStatus(s) {
+            if (status.isValid) status.getComponent(Label).string = s;
+          };
+          toggle.on(Node.EventType.TOUCH_END, function () {
+            _this4.auto = !_this4.auto;
+            refresh();
+          });
+          var tick = function tick() {
+            if (!_this4.auto) {
+              setStatus('⏸ 일시정지');
+              return;
+            }
+            var cleared = _this4.state.campaign.cleared;
+            if (cleared >= CAMPAIGN_CHAPTER_COUNT) {
+              setStatus('완주!');
+              return;
+            }
+            var r = fightChapter(_this4.state, cleared);
+            if (!r.ok) {
+              setStatus(r.reason);
+              _this4.auto = false;
+            } else if (r.win) {
+              pushLog("\u2705 \uCC55\uD130 " + (cleared + 1) + " \uD074\uB9AC\uC5B4  +\uC82C" + r.reward.gem + " +\uC18C\uD658" + r.reward.summon);
+              _this4.refreshWallet();
+              setStatus('⚔ 승리!');
+            } else {
+              var _r$margin;
+              pushLog("\u2716 \uCC55\uD130 " + (cleared + 1) + " \uB3C4\uC804 \uC2E4\uD328 (\uACA9\uCC28 " + Math.round((_r$margin = r.margin) != null ? _r$margin : 0) + ")");
+              setStatus('전투력 부족 — 자동 정지');
+              _this4.auto = false;
+            }
+            refresh();
+          };
+          refresh();
+          this.schedule(tick, 1.5); // 1.5초마다 다음 챕터 도전
+        }
+
+        // ── 전투 화면(공유 파티를 진형별로 배치) ──────────────────────
         ;
 
         _proto.renderBattle = function renderBattle() {
-          var _this4 = this;
-          var units = PARTY.map(function (p) {
-            return createUnit(p.arch, {
-              level: 20,
-              rank: 2,
-              characterId: p.id
-            });
-          });
-          this.state.units = units.slice();
-          this.state.party = units.map(function (u) {
-            return u.uid;
-          });
-          autoFormation(this.state);
+          var _this5 = this;
           var sum = formationSummary(this.state);
           var byId = {};
-          for (var _iterator = _createForOfIteratorHelperLoose(units), _step; !(_step = _iterator()).done;) {
+          for (var _iterator = _createForOfIteratorHelperLoose(this.state.units), _step; !(_step = _iterator()).done;) {
             var u = _step.value;
             byId[u.uid] = u;
           }
@@ -962,9 +1050,9 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
             uids.forEach(function (uid, i) {
               var u = byId[uid];
               var x = (i - (n - 1) / 2) * 150;
-              _this4.addHero(String(u.characterId), computePower(u), x, y);
+              _this5.addHero(String(u.characterId), computePower(u), x, y);
             });
-            if (n > 0) _this4.addLabel(tag, -360, y, 16, _this4.content);
+            if (n > 0) _this5.addLabel(tag, -360, y, 16, _this5.content);
           };
           place(sum.front, 110, '전열');
           place(sum.mid, -30, '중열');
@@ -999,7 +1087,7 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
           var lbl = node.addComponent(Label);
           lbl.string = text;
           lbl.fontSize = size;
-          lbl.lineHeight = size + 4;
+          lbl.lineHeight = size + 6;
           lbl.color = new Color(240, 240, 240, 255);
           return node;
         };
