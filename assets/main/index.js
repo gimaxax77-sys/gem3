@@ -788,7 +788,7 @@ System.register("chunks:///_virtual/balance.ts", ['cc', './relics.ts', './pets.t
 });
 
 System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './gameState.ts', './units.ts', './stats.ts', './formation.ts'], function (exports) {
-  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, Node, Layers, Label, Color, UITransform, Sprite, resources, SpriteFrame, Component, createGameState, createUnit, computePower, autoFormation, formationSummary;
+  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, UITransform, Label, Color, Node, Layers, Sprite, resources, SpriteFrame, Component, createGameState, createUnit, computePower, autoFormation, formationSummary;
   return {
     setters: [function (module) {
       _inheritsLoose = module.inheritsLoose;
@@ -796,11 +796,11 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
     }, function (module) {
       cclegacy = module.cclegacy;
       _decorator = module._decorator;
-      Node = module.Node;
-      Layers = module.Layers;
+      UITransform = module.UITransform;
       Label = module.Label;
       Color = module.Color;
-      UITransform = module.UITransform;
+      Node = module.Node;
+      Layers = module.Layers;
       Sprite = module.Sprite;
       resources = module.resources;
       SpriteFrame = module.SpriteFrame;
@@ -837,20 +837,107 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
         id: 'mage',
         arch: 'MAGE'
       }];
+
+      // 재화 표시(추상 키 → 라벨). economy.createWallet 필드와 일치.
+      var CURRENCIES = [['currency', '골드'], ['growth', '성장'], ['summon', '소환'], ['gem', '젬']];
+
+      // 탭 정의(왼→오). key로 render 분기.
+      var TABS = [['idle', '방치'], ['battle', '전투'], ['heroes', '영웅'], ['summon', '소환']];
+      var TOP_Y = 292; // 재화바 y
+      var TAB_Y = -292; // 탭바 y
+      var HALF_W = 480; // 디자인 해상도 960 → 절반
+
       var BattleDemo = exports('BattleDemo', (_dec = ccclass('BattleDemo'), _dec(_class = /*#__PURE__*/function (_Component) {
         _inheritsLoose(BattleDemo, _Component);
         function BattleDemo() {
-          return _Component.apply(this, arguments) || this;
+          var _this;
+          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+            args[_key] = arguments[_key];
+          }
+          _this = _Component.call.apply(_Component, [this].concat(args)) || this;
+          _this.state = void 0;
+          _this.content = void 0;
+          // 화면별 내용이 그려지는 컨테이너
+          _this.tabNodes = [];
+          _this.active = 'battle';
+          return _this;
         }
         var _proto = BattleDemo.prototype;
+        // 기본 탭(기존 전투 데모 유지)
         _proto.start = function start() {
-          var _s$units,
-            _this = this;
-          // 1) 코어 로직: 파티 구성 + 자동 진형(logic_smoke.ts에서 구동 검증된 API)
-          var s = createGameState({
+          this.state = createGameState({
             units: [],
             party: []
           });
+          // 데모용 초기 재화(뼈대 확인용 — 실제 수급은 이후 방치 루프에서)
+          this.state.wallet.currency = 1200;
+          this.state.wallet.growth = 40;
+          this.state.wallet.summon = 3;
+          this.state.wallet.gem = 15;
+          this.drawTopBar();
+          this.drawTabBar();
+          this.content = this.makeNode('content', 0, 0);
+          this.select(this.active);
+        }
+
+        // ── 상단 재화바 ─────────────────────────────────────────────
+        ;
+
+        _proto.drawTopBar = function drawTopBar() {
+          var _this2 = this;
+          var parts = CURRENCIES.map(function (_ref) {
+            var _this2$state$wallet$k;
+            var k = _ref[0],
+              name = _ref[1];
+            return name + " " + ((_this2$state$wallet$k = _this2.state.wallet[k]) != null ? _this2$state$wallet$k : 0);
+          });
+          this.addLabel(parts.join('    '), 0, TOP_Y, 20);
+        }
+
+        // ── 하단 탭바 ───────────────────────────────────────────────
+        ;
+
+        _proto.drawTabBar = function drawTabBar() {
+          var _this3 = this;
+          var n = TABS.length;
+          var step = (HALF_W * 2 - 80) / n; // 좌우 40 여백
+          TABS.forEach(function (_ref2, i) {
+            var key = _ref2[0],
+              label = _ref2[1];
+            var x = -HALF_W + 40 + step * (i + 0.5);
+            var node = _this3.makeNode('tab_' + key, x, TAB_Y);
+            var tf = node.addComponent(UITransform);
+            tf.setContentSize(step, 64); // 터치 히트영역(UITransform 필수)
+            var lbl = node.addComponent(Label);
+            lbl.string = label;
+            lbl.fontSize = 22;
+            lbl.lineHeight = 26;
+            lbl.color = new Color(150, 150, 150, 255);
+            node.on(Node.EventType.TOUCH_END, function () {
+              return _this3.select(key);
+            });
+            _this3.tabNodes.push(node);
+          });
+        }
+
+        // 탭 전환: 컨텐츠 비우고 해당 화면 렌더 + 탭 강조 갱신
+        ;
+
+        _proto.select = function select(key) {
+          this.active = key;
+          this.content.destroyAllChildren();
+          this.tabNodes.forEach(function (n, i) {
+            var on = TABS[i][0] === key;
+            n.getComponent(Label).color = on ? new Color(255, 220, 120, 255) : new Color(150, 150, 150, 255);
+          });
+          if (key === 'battle') this.renderBattle();else if (key === 'idle') this.renderPlaceholder('방치 화면', '자동 획득·진행 루프 (다음 단계)');else if (key === 'heroes') this.renderPlaceholder('영웅 로스터', "\uBCF4\uC720 \uC720\uB2DB " + this.state.units.length + "\uC885 (\uB2E4\uC74C \uB2E8\uACC4)");else if (key === 'summon') this.renderPlaceholder('소환', "\uC18C\uD658 \uC7AC\uD654 " + this.state.wallet.summon + " (\uB2E4\uC74C \uB2E8\uACC4)");
+        }
+
+        // ── 전투 화면(기존 데모 로직 — 컨텐츠 노드 기준으로 그림) ────────
+        ;
+
+        _proto.renderBattle = function renderBattle() {
+          var _this4 = this;
           var units = PARTY.map(function (p) {
             return createUnit(p.arch, {
               level: 20,
@@ -858,42 +945,56 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
               characterId: p.id
             });
           });
-          (_s$units = s.units).push.apply(_s$units, units);
-          s.party = units.map(function (u) {
+          this.state.units = units.slice();
+          this.state.party = units.map(function (u) {
             return u.uid;
           });
-          autoFormation(s);
-          var sum = formationSummary(s);
+          autoFormation(this.state);
+          var sum = formationSummary(this.state);
           var byId = {};
           for (var _iterator = _createForOfIteratorHelperLoose(units), _step; !(_step = _iterator()).done;) {
             var u = _step.value;
             byId[u.uid] = u;
           }
-
-          // 2) 제목 — 진형 요약
-          this.addLabel("\uC5D8\uB85C\uADF82_cocos \uC804\uD22C \uB370\uBAA8  \xB7  \uC804\uC5F4 " + sum.front.length + " / \uC911\uC5F4 " + sum.mid.length + " / \uD6C4\uC5F4 " + sum.back.length, 0, 250, 22);
-
-          // 3) 진형 열별로 유닛 배치(전열 위 → 후열 아래). 각 유닛 = 스프라이트 + 전투력
+          this.addLabel("\uC804\uD22C \xB7 \uC804\uC5F4 " + sum.front.length + " / \uC911\uC5F4 " + sum.mid.length + " / \uD6C4\uC5F4 " + sum.back.length, 0, 230, 20, this.content);
           var place = function place(uids, y, tag) {
             var n = uids.length;
             uids.forEach(function (uid, i) {
               var u = byId[uid];
               var x = (i - (n - 1) / 2) * 150;
-              _this.addHero(String(u.characterId), computePower(u), x, y);
+              _this4.addHero(String(u.characterId), computePower(u), x, y);
             });
-            if (n > 0) _this.addLabel(tag, -360, y, 16);
+            if (n > 0) _this4.addLabel(tag, -360, y, 16, _this4.content);
           };
-          place(sum.front, 120, '전열');
+          place(sum.front, 110, '전열');
           place(sum.mid, -30, '중열');
-          place(sum.back, -180, '후열');
+          place(sum.back, -170, '후열');
         };
-        _proto.addLabel = function addLabel(text, x, y, size) {
+        _proto.renderPlaceholder = function renderPlaceholder(title, sub) {
+          this.addLabel(title, 0, 40, 28, this.content);
+          this.addLabel(sub, 0, -10, 18, this.content);
+        }
+
+        // ── 헬퍼 ────────────────────────────────────────────────────
+        ;
+
+        _proto.makeNode = function makeNode(name, x, y) {
+          var node = new Node(name);
+          node.layer = Layers.Enum.UI_2D;
+          node.parent = this.node;
+          node.setPosition(x, y, 0);
+          return node;
+        };
+        _proto.addLabel = function addLabel(text, x, y, size, parent) {
           if (size === void 0) {
             size = 16;
           }
+          if (parent === void 0) {
+            parent = this.node;
+          }
           var node = new Node('label');
           node.layer = Layers.Enum.UI_2D;
-          node.parent = this.node;
+          node.parent = parent;
           node.setPosition(x, y, 0);
           var lbl = node.addComponent(Label);
           lbl.string = text;
@@ -905,7 +1006,7 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
         _proto.addHero = function addHero(artKey, power, x, y) {
           var node = new Node('hero_' + artKey);
           node.layer = Layers.Enum.UI_2D;
-          node.parent = this.node;
+          node.parent = this.content;
           node.setPosition(x, y, 0);
           var tf = node.addComponent(UITransform);
           tf.setContentSize(96, 96);
@@ -915,7 +1016,7 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
           resources.load("art/hero/" + artKey + "/idle1/spriteFrame", SpriteFrame, function (err, frame) {
             if (!err && frame && sp.isValid) sp.spriteFrame = frame;
           });
-          this.addLabel(artKey + "  \u2694" + power, x, y - 62, 13);
+          this.addLabel(artKey + "  \u2694" + power, x, y - 62, 13, this.content);
         };
         return BattleDemo;
       }(Component)) || _class));
