@@ -787,8 +787,8 @@ System.register("chunks:///_virtual/balance.ts", ['cc', './relics.ts', './pets.t
   };
 });
 
-System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './gameState.ts', './units.ts', './stats.ts', './formation.ts', './campaign.ts'], function (exports) {
-  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, Label, UITransform, Color, Node, Layers, Sprite, resources, SpriteFrame, Component, createGameState, createUnit, computePower, autoFormation, formationSummary, CAMPAIGN_CHAPTER_COUNT, fightChapter, chapterReward;
+System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './gameState.ts', './units.ts', './stats.ts', './formation.ts', './campaign.ts', './character.ts'], function (exports) {
+  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, Label, UITransform, Color, Node, Layers, Sprite, resources, SpriteFrame, Component, createGameState, createUnit, computePower, autoFormation, formationSummary, CAMPAIGN_CHAPTER_COUNT, fightChapter, chapterReward, levelUp;
   return {
     setters: [function (module) {
       _inheritsLoose = module.inheritsLoose;
@@ -818,6 +818,8 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
       CAMPAIGN_CHAPTER_COUNT = module.CAMPAIGN_CHAPTER_COUNT;
       fightChapter = module.fightChapter;
       chapterReward = module.chapterReward;
+    }, function (module) {
+      levelUp = module.levelUp;
     }],
     execute: function () {
       var _dec, _class;
@@ -878,9 +880,9 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
             party: []
           });
           this.setupParty();
-          // 데모용 초기 재화(뼈대 확인용 — 실제 수급은 방치 루프가 채운다)
+          // 데모용 초기 재화(방치 루프가 gem/summon을 채우고, 로스터 레벨업이 growth를 쓴다)
           this.state.wallet.currency = 1200;
-          this.state.wallet.growth = 40;
+          this.state.wallet.growth = 500000;
           this.state.wallet.summon = 3;
           this.state.wallet.gem = 15;
           this.drawTopBar();
@@ -964,7 +966,7 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
             var on = TABS[i][0] === key;
             n.getComponent(Label).color = on ? new Color(255, 220, 120, 255) : new Color(150, 150, 150, 255);
           });
-          if (key === 'idle') this.renderIdle();else if (key === 'battle') this.renderBattle();else if (key === 'heroes') this.renderPlaceholder('영웅 로스터', "\uBCF4\uC720 \uC720\uB2DB " + this.state.units.length + "\uC885 (\uB2E4\uC74C \uB2E8\uACC4)");else if (key === 'summon') this.renderPlaceholder('소환', "\uC18C\uD658 \uC7AC\uD654 " + this.state.wallet.summon + " (\uB2E4\uC74C \uB2E8\uACC4)");
+          if (key === 'idle') this.renderIdle();else if (key === 'battle') this.renderBattle();else if (key === 'heroes') this.renderHeroes();else if (key === 'summon') this.renderPlaceholder('소환', "\uC18C\uD658 \uC7AC\uD654 " + this.state.wallet.summon + " (\uB2E4\uC74C \uB2E8\uACC4)");
         }
 
         // ── 방치 화면 — 캠페인 자동 도전 루프 ───────────────────────
@@ -1057,6 +1059,45 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
           place(sum.front, 110, '전열');
           place(sum.mid, -30, '중열');
           place(sum.back, -170, '후열');
+        }
+
+        // ── 영웅 로스터 — 보유 유닛 목록 + 레벨업(성장→방치 재도전 루프) ──
+        ;
+
+        _proto.renderHeroes = function renderHeroes() {
+          var _this6 = this;
+          var c = this.content;
+          this.addLabel("\uC601\uC6C5 \uB85C\uC2A4\uD130 (" + this.state.units.length + "\uC885)", 0, 245, 24, c);
+          var sum = formationSummary(this.state);
+          var posOf = function posOf(uid) {
+            return sum.front.includes(uid) ? '전열' : sum.mid.includes(uid) ? '중열' : sum.back.includes(uid) ? '후열' : '-';
+          };
+          this.state.units.forEach(function (u, i) {
+            var row = _this6.makeNode('row_' + u.uid, 0, 175 - i * 78);
+            row.parent = c;
+            _this6.addSprite(String(u.characterId), -390, 0, row, 60);
+            var info = _this6.addLabel('', -330, 13, 16, row);
+            var power = _this6.addLabel('', -330, -13, 14, row);
+            info.getComponent(Label).horizontalAlign = Label.HorizontalAlign.LEFT;
+            power.getComponent(Label).horizontalAlign = Label.HorizontalAlign.LEFT;
+            var update = function update() {
+              info.getComponent(Label).string = u.characterId + " (" + u.archetype + ")  Lv." + u.level + " \u2605" + u.star + "  [" + posOf(u.uid) + "]";
+              power.getComponent(Label).string = "\u2694 " + computePower(u);
+            };
+            update();
+            var btn = _this6.addLabel('[ Lv+ ]', 350, 0, 20, row);
+            btn.getComponent(Label).color = new Color(255, 220, 120, 255);
+            btn.addComponent(UITransform).setContentSize(130, 60);
+            btn.on(Node.EventType.TOUCH_END, function () {
+              var r = levelUp(_this6.state, u.uid);
+              if (r.ok) {
+                update();
+                _this6.refreshWallet();
+              } else {
+                power.getComponent(Label).string = "\u2694 " + computePower(u) + "  \xB7 " + r.reason;
+              }
+            });
+          });
         };
         _proto.renderPlaceholder = function renderPlaceholder(title, sub) {
           this.addLabel(title, 0, 40, 28, this.content);
@@ -1092,19 +1133,29 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
           return node;
         };
         _proto.addHero = function addHero(artKey, power, x, y) {
-          var node = new Node('hero_' + artKey);
+          this.addSprite(artKey, x, y, this.content, 96);
+          this.addLabel(artKey + "  \u2694" + power, x, y - 62, 13, this.content);
+        }
+
+        // 영웅 스프라이트 1개(라벨 없이). 임포트 전이면 로드 실패해도 화면은 정상.
+        ;
+
+        _proto.addSprite = function addSprite(artKey, x, y, parent, size) {
+          if (size === void 0) {
+            size = 96;
+          }
+          var node = new Node('sprite_' + artKey);
           node.layer = Layers.Enum.UI_2D;
-          node.parent = this.content;
+          node.parent = parent;
           node.setPosition(x, y, 0);
           var tf = node.addComponent(UITransform);
-          tf.setContentSize(96, 96);
+          tf.setContentSize(size, size);
           var sp = node.addComponent(Sprite);
           sp.sizeMode = Sprite.SizeMode.CUSTOM;
-          // 스프라이트 임포트 전(.meta 미생성)이면 로드 실패 → 라벨만 남고 화면은 정상.
           resources.load("art/hero/" + artKey + "/idle1/spriteFrame", SpriteFrame, function (err, frame) {
             if (!err && frame && sp.isValid) sp.spriteFrame = frame;
           });
-          this.addLabel(artKey + "  \u2694" + power, x, y - 62, 13, this.content);
+          return node;
         };
         return BattleDemo;
       }(Component)) || _class));
