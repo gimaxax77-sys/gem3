@@ -788,7 +788,7 @@ System.register("chunks:///_virtual/balance.ts", ['cc', './relics.ts', './pets.t
 });
 
 System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './gameState.ts', './units.ts', './stats.ts', './formation.ts', './campaign.ts', './character.ts'], function (exports) {
-  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, Label, UITransform, Color, Node, Layers, Sprite, resources, SpriteFrame, Component, createGameState, createUnit, computePower, autoFormation, formationSummary, CAMPAIGN_CHAPTER_COUNT, fightChapter, chapterReward, levelUp;
+  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, view, ResolutionPolicy, Label, UITransform, Color, Node, Layers, Sprite, resources, SpriteFrame, Component, createGameState, createUnit, computePower, autoFormation, formationSummary, CAMPAIGN_CHAPTER_COUNT, fightChapter, chapterReward, levelUp;
   return {
     setters: [function (module) {
       _inheritsLoose = module.inheritsLoose;
@@ -796,6 +796,8 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
     }, function (module) {
       cclegacy = module.cclegacy;
       _decorator = module._decorator;
+      view = module.view;
+      ResolutionPolicy = module.ResolutionPolicy;
       Label = module.Label;
       UITransform = module.UITransform;
       Color = module.Color;
@@ -849,9 +851,13 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
 
       // 탭 정의(왼→오). key로 render 분기.
       var TABS = [['idle', '방치'], ['battle', '전투'], ['heroes', '영웅'], ['summon', '소환']];
-      var TOP_Y = 292; // 재화바 y
-      var TAB_Y = -292; // 탭바 y
-      var HALF_W = 480; // 디자인 해상도 960 → 절반
+
+      // 세로형 720×1280, 중앙원점 → x: -360~360, y: -640~640
+      var DESIGN_W = 720,
+        DESIGN_H = 1280;
+      var HALF_W = 360;
+      var TOP_Y = 600; // 재화바 y(상단)
+      var TAB_Y = -600; // 탭바 y(하단)
 
       var BattleDemo = exports('BattleDemo', (_dec = ccclass('BattleDemo'), _dec(_class = /*#__PURE__*/function (_Component) {
         _inheritsLoose(BattleDemo, _Component);
@@ -875,6 +881,8 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
         var _proto = BattleDemo.prototype;
         // 방치 자동전투 on/off
         _proto.start = function start() {
+          // 세로형으로 강제(엔진 기본은 1280×720 가로). 씬/설정 안 건드리고 코드로 전환.
+          view.setDesignResolutionSize(DESIGN_W, DESIGN_H, ResolutionPolicy.SHOW_ALL);
           this.state = createGameState({
             units: [],
             party: []
@@ -913,7 +921,7 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
         ;
 
         _proto.drawTopBar = function drawTopBar() {
-          this.walletLabel = this.addLabel(this.walletText(), 0, TOP_Y, 20);
+          this.walletLabel = this.addLabel(this.walletText(), 0, TOP_Y, 22);
         };
         _proto.walletText = function walletText() {
           var _this2 = this;
@@ -922,7 +930,7 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
             var k = _ref[0],
               name = _ref[1];
             return name + " " + ((_this2$state$wallet$k = _this2.state.wallet[k]) != null ? _this2$state$wallet$k : 0);
-          }).join('    ');
+          }).join('   ');
         };
         _proto.refreshWallet = function refreshWallet() {
           var _this$walletLabel;
@@ -935,18 +943,18 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
         _proto.drawTabBar = function drawTabBar() {
           var _this3 = this;
           var n = TABS.length;
-          var step = (HALF_W * 2 - 80) / n; // 좌우 40 여백
+          var step = (HALF_W * 2 - 40) / n; // 좌우 20 여백
           TABS.forEach(function (_ref2, i) {
             var key = _ref2[0],
               label = _ref2[1];
-            var x = -HALF_W + 40 + step * (i + 0.5);
+            var x = -HALF_W + 20 + step * (i + 0.5);
             var node = _this3.makeNode('tab_' + key, x, TAB_Y);
             var tf = node.addComponent(UITransform);
-            tf.setContentSize(step, 64); // 터치 히트영역(UITransform 필수)
+            tf.setContentSize(step, 70); // 터치 히트영역(UITransform 필수)
             var lbl = node.addComponent(Label);
             lbl.string = label;
-            lbl.fontSize = 22;
-            lbl.lineHeight = 26;
+            lbl.fontSize = 26;
+            lbl.lineHeight = 30;
             lbl.color = new Color(150, 150, 150, 255);
             node.on(Node.EventType.TOUCH_END, function () {
               return _this3.select(key);
@@ -975,12 +983,12 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
         _proto.renderIdle = function renderIdle() {
           var _this4 = this;
           var c = this.content;
-          var progress = this.addLabel('', 0, 200, 22, c);
-          var nextInfo = this.addLabel('', 0, 158, 18, c);
-          var toggle = this.addLabel('', 0, 108, 20, c);
-          toggle.addComponent(UITransform).setContentSize(320, 50);
-          var status = this.addLabel('', 0, 62, 16, c);
-          var logLabel = this.addLabel('', 0, -40, 15, c); // 최근 로그 여러 줄
+          var progress = this.addLabel('', 0, 480, 26, c);
+          var nextInfo = this.addLabel('', 0, 420, 20, c);
+          var toggle = this.addLabel('', 0, 350, 24, c);
+          toggle.addComponent(UITransform).setContentSize(360, 60);
+          var status = this.addLabel('', 0, 290, 18, c);
+          var logLabel = this.addLabel('', 0, 120, 17, c); // 최근 로그 여러 줄
           var log = [];
           var refresh = function refresh() {
             var cleared = _this4.state.campaign.cleared;
@@ -995,7 +1003,7 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
           };
           var pushLog = function pushLog(s) {
             log.unshift(s);
-            if (log.length > 5) log.pop();
+            if (log.length > 6) log.pop();
             logLabel.getComponent(Label).string = log.join('\n');
           };
           var setStatus = function setStatus(s) {
@@ -1046,19 +1054,19 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
             var u = _step.value;
             byId[u.uid] = u;
           }
-          this.addLabel("\uC804\uD22C \xB7 \uC804\uC5F4 " + sum.front.length + " / \uC911\uC5F4 " + sum.mid.length + " / \uD6C4\uC5F4 " + sum.back.length, 0, 230, 20, this.content);
+          this.addLabel("\uC804\uD22C \xB7 \uC804\uC5F4 " + sum.front.length + " / \uC911\uC5F4 " + sum.mid.length + " / \uD6C4\uC5F4 " + sum.back.length, 0, 480, 22, this.content);
           var place = function place(uids, y, tag) {
             var n = uids.length;
             uids.forEach(function (uid, i) {
               var u = byId[uid];
-              var x = (i - (n - 1) / 2) * 150;
+              var x = (i - (n - 1) / 2) * 140;
               _this5.addHero(String(u.characterId), computePower(u), x, y);
             });
-            if (n > 0) _this5.addLabel(tag, -360, y, 16, _this5.content);
+            if (n > 0) _this5.addLabel(tag, -310, y, 16, _this5.content);
           };
-          place(sum.front, 110, '전열');
-          place(sum.mid, -30, '중열');
-          place(sum.back, -170, '후열');
+          place(sum.front, 300, '전열');
+          place(sum.mid, 80, '중열');
+          place(sum.back, -140, '후열');
         }
 
         // ── 영웅 로스터 — 보유 유닛 목록 + 레벨업(성장→방치 재도전 루프) ──
@@ -1067,17 +1075,17 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
         _proto.renderHeroes = function renderHeroes() {
           var _this6 = this;
           var c = this.content;
-          this.addLabel("\uC601\uC6C5 \uB85C\uC2A4\uD130 (" + this.state.units.length + "\uC885)", 0, 245, 24, c);
+          this.addLabel("\uC601\uC6C5 \uB85C\uC2A4\uD130 (" + this.state.units.length + "\uC885)", 0, 520, 24, c);
           var sum = formationSummary(this.state);
           var posOf = function posOf(uid) {
             return sum.front.includes(uid) ? '전열' : sum.mid.includes(uid) ? '중열' : sum.back.includes(uid) ? '후열' : '-';
           };
           this.state.units.forEach(function (u, i) {
-            var row = _this6.makeNode('row_' + u.uid, 0, 175 - i * 78);
+            var row = _this6.makeNode('row_' + u.uid, 0, 410 - i * 165);
             row.parent = c;
-            _this6.addSprite(String(u.characterId), -390, 0, row, 60);
-            var info = _this6.addLabel('', -330, 13, 16, row);
-            var power = _this6.addLabel('', -330, -13, 14, row);
+            _this6.addSprite(String(u.characterId), -290, 0, row, 80);
+            var info = _this6.addLabel('', -230, 16, 17, row);
+            var power = _this6.addLabel('', -230, -14, 15, row);
             info.getComponent(Label).horizontalAlign = Label.HorizontalAlign.LEFT;
             power.getComponent(Label).horizontalAlign = Label.HorizontalAlign.LEFT;
             var update = function update() {
@@ -1085,9 +1093,9 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
               power.getComponent(Label).string = "\u2694 " + computePower(u);
             };
             update();
-            var btn = _this6.addLabel('[ Lv+ ]', 350, 0, 20, row);
+            var btn = _this6.addLabel('[ Lv+ ]', 270, 0, 22, row);
             btn.getComponent(Label).color = new Color(255, 220, 120, 255);
-            btn.addComponent(UITransform).setContentSize(130, 60);
+            btn.addComponent(UITransform).setContentSize(140, 70);
             btn.on(Node.EventType.TOUCH_END, function () {
               var r = levelUp(_this6.state, u.uid);
               if (r.ok) {
@@ -1100,8 +1108,8 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
           });
         };
         _proto.renderPlaceholder = function renderPlaceholder(title, sub) {
-          this.addLabel(title, 0, 40, 28, this.content);
-          this.addLabel(sub, 0, -10, 18, this.content);
+          this.addLabel(title, 0, 80, 30, this.content);
+          this.addLabel(sub, 0, 10, 18, this.content);
         }
 
         // ── 헬퍼 ────────────────────────────────────────────────────
