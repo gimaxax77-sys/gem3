@@ -787,8 +787,8 @@ System.register("chunks:///_virtual/balance.ts", ['cc', './relics.ts', './pets.t
   };
 });
 
-System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './gameState.ts', './units.ts', './stats.ts', './formation.ts', './campaign.ts', './character.ts'], function (exports) {
-  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, view, ResolutionPolicy, Label, UITransform, Color, Node, Layers, Sprite, resources, SpriteFrame, Component, createGameState, createUnit, computePower, autoFormation, formationSummary, CAMPAIGN_CHAPTER_COUNT, fightChapter, chapterReward, levelUp;
+System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHelpers.js', 'cc', './gameState.ts', './units.ts', './stats.ts', './formation.ts', './campaign.ts', './character.ts', './gacha.ts'], function (exports) {
+  var _inheritsLoose, _createForOfIteratorHelperLoose, cclegacy, _decorator, view, ResolutionPolicy, Label, UITransform, Color, Node, Layers, Sprite, resources, SpriteFrame, Component, createGameState, createUnit, computePower, autoFormation, formationSummary, CAMPAIGN_CHAPTER_COUNT, fightChapter, chapterReward, levelUp, summonOne, summonMulti, PULL_COST;
   return {
     setters: [function (module) {
       _inheritsLoose = module.inheritsLoose;
@@ -822,6 +822,10 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
       chapterReward = module.chapterReward;
     }, function (module) {
       levelUp = module.levelUp;
+    }, function (module) {
+      summonOne = module.summonOne;
+      summonMulti = module.summonMulti;
+      PULL_COST = module.PULL_COST;
     }],
     execute: function () {
       var _dec, _class;
@@ -974,7 +978,7 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
             var on = TABS[i][0] === key;
             n.getComponent(Label).color = on ? new Color(255, 220, 120, 255) : new Color(150, 150, 150, 255);
           });
-          if (key === 'idle') this.renderIdle();else if (key === 'battle') this.renderBattle();else if (key === 'heroes') this.renderHeroes();else if (key === 'summon') this.renderPlaceholder('소환', "\uC18C\uD658 \uC7AC\uD654 " + this.state.wallet.summon + " (\uB2E4\uC74C \uB2E8\uACC4)");
+          if (key === 'idle') this.renderIdle();else if (key === 'battle') this.renderBattle();else if (key === 'heroes') this.renderHeroes();else if (key === 'summon') this.renderSummon();
         }
 
         // ── 방치 화면 — 캠페인 자동 도전 루프 ───────────────────────
@@ -1075,21 +1079,27 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
         _proto.renderHeroes = function renderHeroes() {
           var _this6 = this;
           var c = this.content;
-          this.addLabel("\uC601\uC6C5 \uB85C\uC2A4\uD130 (" + this.state.units.length + "\uC885)", 0, 520, 24, c);
+          var total = this.state.units.length;
+          this.addLabel(total > 5 ? "\uC601\uC6C5 \uB85C\uC2A4\uD130 (\uC0C1\uC704 5 / \uCD1D " + total + "\uC885)" : "\uC601\uC6C5 \uB85C\uC2A4\uD130 (" + total + "\uC885)", 0, 520, 24, c);
           var sum = formationSummary(this.state);
           var posOf = function posOf(uid) {
-            return sum.front.includes(uid) ? '전열' : sum.mid.includes(uid) ? '중열' : sum.back.includes(uid) ? '후열' : '-';
+            return sum.front.includes(uid) ? '전열' : sum.mid.includes(uid) ? '중열' : sum.back.includes(uid) ? '후열' : '예비';
           };
-          this.state.units.forEach(function (u, i) {
+
+          // 세로 5행까지만 표시(소환으로 늘면 상위만). 넘치면 안내.
+          var shown = this.state.units.slice(0, 5);
+          shown.forEach(function (u, i) {
+            var _u$characterId;
+            var name = (_u$characterId = u.characterId) != null ? _u$characterId : u.archetype; // 소환 유닛은 characterId 없음
             var row = _this6.makeNode('row_' + u.uid, 0, 410 - i * 165);
             row.parent = c;
-            _this6.addSprite(String(u.characterId), -290, 0, row, 80);
+            _this6.addSprite(String(name), -290, 0, row, 80);
             var info = _this6.addLabel('', -230, 16, 17, row);
             var power = _this6.addLabel('', -230, -14, 15, row);
             info.getComponent(Label).horizontalAlign = Label.HorizontalAlign.LEFT;
             power.getComponent(Label).horizontalAlign = Label.HorizontalAlign.LEFT;
             var update = function update() {
-              info.getComponent(Label).string = u.characterId + " (" + u.archetype + ")  Lv." + u.level + " \u2605" + u.star + "  [" + posOf(u.uid) + "]";
+              info.getComponent(Label).string = name + " (" + u.archetype + ")  Lv." + u.level + " \u2605" + u.star + "  [" + posOf(u.uid) + "]";
               power.getComponent(Label).string = "\u2694 " + computePower(u);
             };
             update();
@@ -1106,6 +1116,74 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
               }
             });
           });
+        }
+
+        // ── 소환/가챠 — 방치로 모은 소환 재화로 영웅 뽑기 ──────────────
+        ;
+
+        _proto.renderSummon = function renderSummon() {
+          var _this7 = this;
+          var c = this.content;
+          var one = PULL_COST.summon,
+            ten = one * 10;
+          this.addLabel('소환', 0, 500, 30, c);
+          this.addLabel('방치로 모은 소환 재화로 영웅을 뽑습니다', 0, 445, 17, c);
+          var result = this.addLabel('', 0, 120, 18, c);
+          var grade = function grade(rar) {
+            return rar === 'SSR' || rar === 'UR' ? new Color(255, 210, 90, 255) : rar === 'SR' ? new Color(200, 140, 255, 255) : rar === 'R' ? new Color(120, 190, 255, 255) : new Color(180, 180, 180, 255);
+          };
+          var showOne = function showOne(r) {
+            var _r$characterId;
+            if (!r.ok) {
+              result.getComponent(Label).string = "\u26A0 " + r.reason;
+              result.getComponent(Label).color = new Color(255, 140, 140, 255);
+              return;
+            }
+            result.getComponent(Label).string = "\uD83C\uDF89 [" + r.rarity + "] " + ((_r$characterId = r.characterId) != null ? _r$characterId : r.archetype) + "\n\uB85C\uC2A4\uD130\uC5D0 \uD569\uB958! (\uBCF4\uC720 " + _this7.state.units.length + "\uC885)";
+            result.getComponent(Label).color = grade(r.rarity);
+            _this7.refreshWallet();
+          };
+          var showMulti = function showMulti(rs) {
+            if (!rs.ok) {
+              result.getComponent(Label).string = "\u26A0 " + rs.reason;
+              result.getComponent(Label).color = new Color(255, 140, 140, 255);
+              return;
+            }
+            var cnt = {};
+            for (var _iterator2 = _createForOfIteratorHelperLoose(rs.results), _step2; !(_step2 = _iterator2()).done;) {
+              var r = _step2.value;
+              cnt[r.rarity] = (cnt[r.rarity] || 0) + 1;
+            }
+            var order = ['UR', 'SSR', 'SR', 'R', 'N'];
+            var summary = order.filter(function (k) {
+              return cnt[k];
+            }).map(function (k) {
+              return k + "\xD7" + cnt[k];
+            }).join('  ');
+            var best = order.find(function (k) {
+              return cnt[k];
+            }) || 'N';
+            result.getComponent(Label).string = "10\uC5F0\uCC28 \uACB0\uACFC\n" + summary + "\n(\uBCF4\uC720 " + _this7.state.units.length + "\uC885)";
+            result.getComponent(Label).color = grade(best);
+            _this7.refreshWallet();
+          };
+          this.makeButton("1\uD68C \uC18C\uD658 (\uC18C\uD658 " + one + ")", 0, 340, c, function () {
+            return showOne(summonOne(_this7.state));
+          });
+          this.makeButton("10\uC5F0\uCC28 (\uC18C\uD658 " + ten + ")", 0, 250, c, function () {
+            return showMulti(summonMulti(_this7.state, 10));
+          });
+        }
+
+        // 라벨 버튼(터치영역 포함). 코드 UI 공용.
+        ;
+
+        _proto.makeButton = function makeButton(text, x, y, parent, onTap) {
+          var btn = this.addLabel(text, x, y, 22, parent);
+          btn.getComponent(Label).color = new Color(255, 220, 120, 255);
+          btn.addComponent(UITransform).setContentSize(360, 60);
+          btn.on(Node.EventType.TOUCH_END, onTap);
+          return btn;
         };
         _proto.renderPlaceholder = function renderPlaceholder(title, sub) {
           this.addLabel(title, 0, 80, 30, this.content);
