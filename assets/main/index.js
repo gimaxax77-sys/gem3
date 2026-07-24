@@ -871,7 +871,7 @@ System.register("chunks:///_virtual/BattleDemo.ts", ['./rollupPluginModLoBabelHe
           }
 
           // 2) 제목 — 진형 요약
-          this.addLabel("\uAC9C3 \uC804\uD22C \uB370\uBAA8  \xB7  \uC804\uC5F4 " + sum.front.length + " / \uC911\uC5F4 " + sum.mid.length + " / \uD6C4\uC5F4 " + sum.back.length, 0, 250, 22);
+          this.addLabel("\uC5D8\uB85C\uADF82_cocos \uC804\uD22C \uB370\uBAA8  \xB7  \uC804\uC5F4 " + sum.front.length + " / \uC911\uC5F4 " + sum.mid.length + " / \uD6C4\uC5F4 " + sum.back.length, 0, 250, 22);
 
           // 3) 진형 열별로 유닛 배치(전열 위 → 후열 아래). 각 유닛 = 스프라이트 + 전투력
           var place = function place(uids, y, tag) {
@@ -1580,10 +1580,10 @@ System.register("chunks:///_virtual/compshop.ts", ['cc', './economy.ts', './prog
       function resolveGrant(state, grant) {
         var st = getStage(state.peakStage).rewards;
         var out = {};
-        for (var _i = 0, _Object$entries = Object.entries(grant); _i < _Object$entries.length; _i++) {
-          var _Object$entries$_i = _Object$entries[_i],
-            k = _Object$entries$_i[0],
-            v = _Object$entries$_i[1];
+        for (var _i = 0, _arr = Object.entries(grant); _i < _arr.length; _i++) {
+          var _arr$_i = _arr[_i],
+            k = _arr$_i[0],
+            v = _arr$_i[1];
           if (k === 'currencyStage') out.currency = (out.currency || 0) + Math.round(st.currency * v);else if (k === 'growthStage') out.growth = (out.growth || 0) + Math.round(st.growth * v);else out[k] = (out[k] || 0) + v;
         }
         return out;
@@ -3026,16 +3026,16 @@ System.register("chunks:///_virtual/economy.ts", ['./rollupPluginModLoBabelHelpe
 
       // 비용을 지불할 수 있으면 차감하고 true, 아니면 false.
       function spend(wallet, cost) {
-        for (var _i2 = 0, _Object$entries2 = Object.entries(cost); _i2 < _Object$entries2.length; _i2++) {
-          var _Object$entries2$_i = _Object$entries2[_i2],
-            k = _Object$entries2$_i[0],
-            v = _Object$entries2$_i[1];
+        for (var _i2 = 0, _arr = Object.entries(cost); _i2 < _arr.length; _i2++) {
+          var _arr$_i = _arr[_i2],
+            k = _arr$_i[0],
+            v = _arr$_i[1];
           if ((wallet[k] || 0) < v) return false;
         }
-        for (var _i3 = 0, _Object$entries3 = Object.entries(cost); _i3 < _Object$entries3.length; _i3++) {
-          var _Object$entries3$_i = _Object$entries3[_i3],
-            _k = _Object$entries3$_i[0],
-            _v = _Object$entries3$_i[1];
+        for (var _i3 = 0, _arr2 = Object.entries(cost); _i3 < _arr2.length; _i3++) {
+          var _arr2$_i = _arr2[_i3],
+            _k = _arr2$_i[0],
+            _v = _arr2$_i[1];
           wallet[_k] -= _v;
         }
         return true;
@@ -3215,10 +3215,10 @@ System.register("chunks:///_virtual/emblems.ts", ['cc', './economy.ts'], functio
           currency = 1,
           growth = 1;
         var owned = state.emblems || {};
-        for (var _i = 0, _Object$entries = Object.entries(owned); _i < _Object$entries.length; _i++) {
-          var _Object$entries$_i = _Object$entries[_i],
-            id = _Object$entries$_i[0],
-            lv = _Object$entries$_i[1];
+        for (var _i = 0, _arr = Object.entries(owned); _i < _arr.length; _i++) {
+          var _arr$_i = _arr[_i],
+            id = _arr$_i[0],
+            lv = _arr$_i[1];
           var e = EMBLEMS[id];
           if (!e || !lv) continue;
           if (e.kind === 'power') power += e.per * lv;else if (e.kind === 'currency') currency += e.per * lv;else growth += e.per * lv;
@@ -6049,10 +6049,10 @@ System.register("chunks:///_virtual/gear.ts", ['./rollupPluginModLoBabelHelpers.
         var rmult = GEAR_RARITY[gearItem.rarity] && GEAR_RARITY[gearItem.rarity].mult || 1.0;
         var scale = (1 + GEAR_ENH_PER * (gearItem.level - 1)) * rmult;
         var flat = {};
-        for (var _i4 = 0, _Object$entries4 = Object.entries(b.flat || {}); _i4 < _Object$entries4.length; _i4++) {
-          var _Object$entries4$_i = _Object$entries4[_i4],
-            k = _Object$entries4$_i[0],
-            v = _Object$entries4$_i[1];
+        for (var _i4 = 0, _arr = Object.entries(b.flat || {}); _i4 < _arr.length; _i4++) {
+          var _arr$_i = _arr[_i4],
+            k = _arr$_i[0],
+            v = _arr$_i[1];
           flat[k] = v * scale;
         }
         var statPct = {};
@@ -7789,10 +7789,10 @@ System.register("chunks:///_virtual/meta.ts", ['./rollupPluginModLoBabelHelpers.
       function scaleReward(state, reward) {
         var st = getStage(state.peakStage).rewards;
         var out = {};
-        for (var _i = 0, _Object$entries = Object.entries(reward); _i < _Object$entries.length; _i++) {
-          var _Object$entries$_i = _Object$entries[_i],
-            k = _Object$entries$_i[0],
-            v = _Object$entries$_i[1];
+        for (var _i = 0, _arr = Object.entries(reward); _i < _arr.length; _i++) {
+          var _arr$_i = _arr[_i],
+            k = _arr$_i[0],
+            v = _arr$_i[1];
           if (k === 'currencyStage') out.currency = (out.currency || 0) + Math.round(st.currency * v);else if (k === 'growthStage') out.growth = (out.growth || 0) + Math.round(st.growth * v);else out[k] = (out[k] || 0) + v;
         }
         return out;
@@ -8226,10 +8226,10 @@ System.register("chunks:///_virtual/modifiers.ts", ['./rollupPluginModLoBabelHel
 
         // 3) 강화(각인) — 노드 레벨 × 노드당 증가값
         var enh = unit.enhance || {};
-        for (var _i5 = 0, _Object$entries = Object.entries(enh); _i5 < _Object$entries.length; _i5++) {
-          var _Object$entries$_i = _Object$entries[_i5],
-            stat = _Object$entries$_i[0],
-            lvl = _Object$entries$_i[1];
+        for (var _i5 = 0, _arr = Object.entries(enh); _i5 < _arr.length; _i5++) {
+          var _arr$_i = _arr[_i5],
+            stat = _arr$_i[0],
+            lvl = _arr$_i[1];
           if (!lvl) continue;
           var node = ENHANCE_NODES[stat];
           if (!node) continue;
@@ -8655,10 +8655,10 @@ System.register("chunks:///_virtual/pets.ts", ['./rollupPluginModLoBabelHelpers.
       var PET_FUSE_COST = exports('PET_FUSE_COST', 5);
       function petFuseAvail(state, rarity) {
         var n = 0;
-        for (var _i = 0, _Object$entries = Object.entries(state.pets.owned || {}); _i < _Object$entries.length; _i++) {
-          var _Object$entries$_i = _Object$entries[_i],
-            id = _Object$entries$_i[0],
-            lv = _Object$entries$_i[1];
+        for (var _i = 0, _arr = Object.entries(state.pets.owned || {}); _i < _arr.length; _i++) {
+          var _arr$_i = _arr[_i],
+            id = _arr$_i[0],
+            lv = _arr$_i[1];
           if (PETS[id] && PETS[id].rarity === rarity) n += lv;
         }
         return n;
@@ -9095,10 +9095,10 @@ System.register("chunks:///_virtual/relics.ts", ['cc', './economy.ts'], function
           currency = 1,
           growth = 1;
         var owned = state.relics || {};
-        for (var _i = 0, _Object$entries = Object.entries(owned); _i < _Object$entries.length; _i++) {
-          var _Object$entries$_i = _Object$entries[_i],
-            id = _Object$entries$_i[0],
-            lv = _Object$entries$_i[1];
+        for (var _i = 0, _arr = Object.entries(owned); _i < _arr.length; _i++) {
+          var _arr$_i = _arr[_i],
+            id = _arr$_i[0],
+            lv = _arr$_i[1];
           var r = RELICS[id];
           if (!r || !lv) continue;
           if (r.kind === 'power') power += r.per * lv;else if (r.kind === 'currency') currency += r.per * lv;else if (r.kind === 'growth') growth += r.per * lv;
@@ -12937,10 +12937,10 @@ System.register("chunks:///_virtual/shop.ts", ['cc', './economy.ts', './progress
       function resolveGrant(state, grant) {
         var st = getStage(state.peakStage).rewards;
         var out = {};
-        for (var _i = 0, _Object$entries = Object.entries(grant); _i < _Object$entries.length; _i++) {
-          var _Object$entries$_i = _Object$entries[_i],
-            k = _Object$entries$_i[0],
-            v = _Object$entries$_i[1];
+        for (var _i = 0, _arr = Object.entries(grant); _i < _arr.length; _i++) {
+          var _arr$_i = _arr[_i],
+            k = _arr$_i[0],
+            v = _arr$_i[1];
           if (k === 'currencyStage') out.currency = (out.currency || 0) + Math.round(st.currency * v);else if (k === 'growthStage') out.growth = (out.growth || 0) + Math.round(st.growth * v);else out[k] = (out[k] || 0) + v;
         }
         return out;
@@ -13203,10 +13203,10 @@ System.register("chunks:///_virtual/sigweapon.ts", ['./rollupPluginModLoBabelHel
         var p = PROFILE[unit.archetype] || PROFILE.STRIKER;
         var scale = 1 + WEAPON_ENH_PER * (unit.sigWeapon.level - 1);
         var flat = {};
-        for (var _i = 0, _Object$entries = Object.entries(p.flat); _i < _Object$entries.length; _i++) {
-          var _Object$entries$_i = _Object$entries[_i],
-            k = _Object$entries$_i[0],
-            v = _Object$entries$_i[1];
+        for (var _i = 0, _arr = Object.entries(p.flat); _i < _arr.length; _i++) {
+          var _arr$_i = _arr[_i],
+            k = _arr$_i[0],
+            v = _arr$_i[1];
           flat[k] = v * scale;
         }
         return {
